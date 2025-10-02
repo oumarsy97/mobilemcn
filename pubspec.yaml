@@ -1,0 +1,42 @@
+name: mcn
+description: Application de maison des civilisations noires
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  get: ^4.6.6
+  get_storage: ^2.1.1
+  http: ^1.2.0
+  cupertino_icons: ^1.0.8
+  cached_network_image: ^3.4.1
+  google_fonts: ^6.1.0
+  mobile_scanner: ^5.2.3
+  permission_handler: ^12.0.1
+  vibration: ^3.1.3
+  http_parser: ^4.0.2
+  intl: ^0.20.2
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.1
+  pdfx: ^2.9.2
+  json_annotation: ^4.9.0
+  flutter_dotenv: ^5.1.0
+  video_player: ^2.8.0
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  
+  # ✅ Assets configuration
+  assets:
+    - .env
+    #- assets/documents/exemple.pdf  # Spécifiez explicitement le fichier PDF
