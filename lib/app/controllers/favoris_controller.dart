@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/favoris_model.dart';
 import '../services/favoris_service.dart';
@@ -26,17 +27,15 @@ class FavorisController extends GetxController {
       final authController = Get.find<AuthController>();
       final userId = authController.getUserId();
       
-      // ✅ Si non connecté, ne rien charger
       if (userId == null) {
         favoris.clear();
         favoriOeuvreIds.clear();
         return;
       }
 
-      // Charger depuis l'API
       final fetchedFavoris = await _favoriService.getFavoris(userId);
-      favoris.value = fetchedFavoris;
-      favoriOeuvreIds.value = fetchedFavoris.map((f) => f.oeuvreId).toList();
+      favoris.assignAll(fetchedFavoris); // ✅ Utiliser assignAll au lieu de value
+      favoriOeuvreIds.assignAll(fetchedFavoris.map((f) => f.oeuvreId).toList());
       
     } catch (e) {
       print('Erreur loadFavoris: $e');
@@ -50,7 +49,6 @@ class FavorisController extends GetxController {
   // Vérifier si une oeuvre est en favori
   bool isFavorite(String oeuvreId) {
     final authController = Get.find<AuthController>();
-    // ✅ Retourner false si non connecté
     if (!authController.isLoggedIn.value) return false;
     return favoriOeuvreIds.contains(oeuvreId);
   }
@@ -61,13 +59,17 @@ class FavorisController extends GetxController {
 
     final authController = Get.find<AuthController>();
     
-    // ✅ Bloquer l'action si non connecté
     if (!authController.isLoggedIn.value) {
       Get.snackbar(
         'Connexion requise',
         'Veuillez vous connecter pour ajouter des favoris',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
         duration: const Duration(seconds: 3),
+        icon: const Icon(Icons.lock, color: Colors.white),
       );
       return;
     }
@@ -78,36 +80,55 @@ class FavorisController extends GetxController {
       final userId = authController.getUserId();
       if (userId == null) return;
 
-      // Gestion avec API
       if (isFavorite(oeuvreId)) {
-        // Supprimer
+        // ✅ SUPPRESSION
         final favori = favoris.firstWhereOrNull((f) => f.oeuvreId == oeuvreId);
         if (favori != null) {
+          // Appel API d'abord
           await _favoriService.supprimerFavori(favori.id);
-          favoris.remove(favori);
+          
+          // ✅ Mise à jour UI après succès API
+          favoris.removeWhere((f) => f.oeuvreId == oeuvreId);
           favoriOeuvreIds.remove(oeuvreId);
+          
+          // ✅ Force la mise à jour
+          update();
           
           Get.snackbar(
             'Retiré',
-            'Retiré des favoris',
+            'Œuvre retirée de vos favoris',
             snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade600,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16),
+            borderRadius: 12,
             duration: const Duration(seconds: 2),
+            icon: const Icon(Icons.favorite_border, color: Colors.white),
           );
         }
       } else {
-        // Ajouter
+        // ✅ AJOUT
         final newFavori = await _favoriService.ajouterFavori(
           utilisateurId: userId,
           oeuvreId: oeuvreId,
         );
+        
         favoris.add(newFavori);
         favoriOeuvreIds.add(oeuvreId);
         
+        // ✅ Force la mise à jour
+        update();
+        
         Get.snackbar(
           'Ajouté',
-          'Ajouté aux favoris',
+          'Œuvre ajoutée à vos favoris',
           snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade600,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
           duration: const Duration(seconds: 2),
+          icon: const Icon(Icons.favorite, color: Colors.white),
         );
       }
       
@@ -116,6 +137,12 @@ class FavorisController extends GetxController {
         'Erreur',
         'Impossible de modifier les favoris',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 2),
+        icon: const Icon(Icons.error_outline, color: Colors.white),
       );
       print('Erreur toggleFavorite: $e');
     } finally {
@@ -126,13 +153,17 @@ class FavorisController extends GetxController {
   // Récupérer les oeuvres favorites
   List<dynamic> getFavoriteOeuvres() {
     final authController = Get.find<AuthController>();
-    // ✅ Retourner liste vide si non connecté
     if (!authController.isLoggedIn.value) return [];
     
-    final oeuvreController = Get.find<OeuvreController>();
-    return oeuvreController.oeuvres
-        .where((oeuvre) => favoriOeuvreIds.contains(oeuvre.id))
-        .toList();
+    try {
+      final oeuvreController = Get.find<OeuvreController>();
+      return oeuvreController.oeuvres
+          .where((oeuvre) => favoriOeuvreIds.contains(oeuvre.id))
+          .toList();
+    } catch (e) {
+      print('Erreur getFavoriteOeuvres: $e');
+      return [];
+    }
   }
 
   // Rafraîchir les favoris
@@ -140,9 +171,10 @@ class FavorisController extends GetxController {
     await loadFavoris();
   }
 
-  // ✅ Vider tous les favoris (lors de la déconnexion)
+  // Vider tous les favoris (lors de la déconnexion)
   void clearFavoris() {
     favoris.clear();
     favoriOeuvreIds.clear();
+    update();
   }
 }

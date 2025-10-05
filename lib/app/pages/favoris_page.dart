@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/favoris_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_color.dart';
+import '../widgets/custom_bottom_nav.dart';
 
 class FavoritesPage extends GetView<FavorisController> {
   const FavoritesPage({super.key});
@@ -111,6 +112,7 @@ class FavoritesPage extends GetView<FavorisController> {
           );
         }),
       ),
+      bottomNavigationBar: CustomBottomNav(currentIndex: 1),
     );
   }
 

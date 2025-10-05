@@ -13,12 +13,10 @@ class OeuvreService extends GetConnect {
     
     // Intercepteur pour logger les requêtes (optionnel)
     httpClient.addRequestModifier<dynamic>((request) {
-      print('REQUEST: ${request.method} ${request.url}');
       return request;
     });
     
     httpClient.addResponseModifier((request, response) {
-      print('RESPONSE: ${response.statusCode} - ${response.body.runtimeType}');
       return response;
     });
     
@@ -37,8 +35,8 @@ class OeuvreService extends GetConnect {
       }
 
       // DÉBOGAGE
-      print('Type de response.body: ${response.body.runtimeType}');
-      print('Contenu de response.body: ${response.body}');
+      // print('Type de response.body: ${response.body.runtimeType}');
+      // print('Contenu de response.body: ${response.body}');
 
       final data = response.body;
       

@@ -26,7 +26,11 @@ dependencies:
   json_annotation: ^4.9.0
   flutter_dotenv: ^5.1.0
   video_player: ^2.8.0
+  audioplayers: ^5.2.1
   
+  # Pour la visite virtuelle 3D avec Three.js
+  webview_flutter: ^4.4.2
+  flutter_inappwebview: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -36,7 +40,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # ✅ Assets configuration
   assets:
     - .env
-    #- assets/documents/exemple.pdf  # Spécifiez explicitement le fichier PDF
+    - assets/images/logo.jpeg
+    - assets/html/  # Pour les fichiers HTML Three.js

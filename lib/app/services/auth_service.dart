@@ -41,7 +41,7 @@ class AuthService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('${Constants.baseUrl}/utilisateurs/inscription'),
+        Uri.parse('${Constants.baseUrl}/utilisateurs/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'nom': nom,

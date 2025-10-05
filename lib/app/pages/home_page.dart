@@ -6,19 +6,24 @@ import '../controllers/oeuvre_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/favoris_controller.dart';
 import '../utils/app_color.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/custom_bottom_nav.dart';
+import '../widgets/app_logo.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldKey = GlobalKey<ScaffoldState>();
     final oeuvreController = Get.find<OeuvreController>();
     final authController = Get.find<AuthController>();
     final favoriController = Get.find<FavorisController>();
     
     return Scaffold(
+      key: scaffoldKey,
       backgroundColor: AppColors.background,
-      drawer: _buildDrawer(authController),
+      drawer: const AppDrawer(),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -28,321 +33,61 @@ class HomePage extends StatelessWidget {
           color: AppColors.primary,
           child: CustomScrollView(
             slivers: [
-              _buildAppBar(oeuvreController),
+              _buildAppBar(scaffoldKey, oeuvreController),
               _buildHeroSection(authController),
-              _buildExpositionsSection(oeuvreController),
+              _buildVirtualTourButton(),
+              _buildSearchSection(oeuvreController),
               _buildOeuvresGrid(oeuvreController, favoriController),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: CustomBottomNav(currentIndex: 0),
     );
   }
 
-  // ✅ Méthode pour récupérer le titre selon la langue
-  String _getTitre(dynamic oeuvre, String langue) {
-    switch (langue) {
-      case 'FR':
-        return oeuvre.titreFr ?? oeuvre.titre ?? 'Sans titre';
-      case 'EN':
-        return oeuvre.titreEn ?? oeuvre.titre ?? 'Untitled';
-      case 'WO':
-        return oeuvre.titreWo ?? oeuvre.titre ?? 'Ñuul tuddu';
-      default:
-        return oeuvre.titre ?? 'Sans titre';
-    }
-  }
-
-  // ✅ Méthode pour récupérer la description selon la langue
-  String _getDescription(dynamic oeuvre, String langue) {
-    switch (langue) {
-      case 'FR':
-        return oeuvre.descriptionFr ?? oeuvre.description ?? '';
-      case 'EN':
-        return oeuvre.descriptionEn ?? oeuvre.description ?? '';
-      case 'WO':
-        return oeuvre.descriptionWo ?? oeuvre.description ?? '';
-      default:
-        return oeuvre.description ?? '';
-    }
-  }
-
-  Widget _buildDrawer(AuthController authController) {
-    return Drawer(
-      backgroundColor: AppColors.surface,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.museum,
-                      size: 48,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'MCN Museum',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Civilisations Noires',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Obx(() {
-              if (authController.isLoggedIn.value) {
-                final user = authController.currentUser.value;
-                return Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user?.fullName ?? 'Utilisateur',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              user?.email ?? '',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            }),
-
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  _buildDrawerItem(
-                    icon: Icons.home,
-                    title: 'Accueil',
-                    onTap: () {
-                      Get.back();
-                    },
-                  ),
-                  // ✅ Afficher "Mes Favoris" seulement si connecté
-                  Obx(() {
-                    if (authController.isLoggedIn.value) {
-                      return _buildDrawerItem(
-                        icon: Icons.favorite,
-                        title: 'Mes Favoris',
-                        onTap: () {
-                          Get.back();
-                          Get.toNamed('/favorites');
-                        },
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
-                  _buildDrawerItem(
-                    icon: Icons.qr_code_scanner,
-                    title: 'Scanner QR',
-                    onTap: () {
-                      Get.back();
-                      Get.toNamed('/qr-scanner');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.settings,
-                    title: 'Paramètres',
-                    onTap: () {
-                      Get.back();
-                      Get.toNamed('/settings');
-                    },
-                  ),
-                  const Divider(height: 32),
-                  Obx(() {
-                    if (authController.isLoggedIn.value) {
-                      return _buildDrawerItem(
-                        icon: Icons.logout,
-                        title: 'Déconnexion',
-                        textColor: Colors.red,
-                        iconColor: Colors.red,
-                        onTap: () {
-                          Get.back();
-                          _showLogoutDialog(authController);
-                        },
-                      );
-                    } else {
-                      return _buildDrawerItem(
-                        icon: Icons.login,
-                        title: 'Connexion',
-                        iconColor: AppColors.primary,
-                        textColor: AppColors.primary,
-                        onTap: () {
-                          Get.back();
-                          Get.toNamed('/auth');
-                        },
-                      );
-                    }
-                  }),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? iconColor,
-    Color? textColor,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppColors.textPrimary),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: textColor ?? AppColors.textPrimary,
-        ),
-      ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(AuthController authController) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'Déconnexion',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text(
-              'Annuler',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              authController.logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Déconnecter'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppBar(OeuvreController oeuvreController) {
-    return SliverToBoxAdapter(
-      child: Container(
+  Widget _buildAppBar(GlobalKey<ScaffoldState> scaffoldKey, OeuvreController oeuvreController) {
+    return SliverAppBar(
+      pinned: true,
+      floating: false,
+      backgroundColor: AppColors.background,
+      elevation: 0,
+      toolbarHeight: 80,
+      automaticallyImplyLeading: false,
+      flexibleSpace: Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          border: Border(
+            bottom: BorderSide(
+              color: AppColors.divider.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+        ),
         child: Row(
           children: [
-            Builder(
-              builder: (context) => Container(
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: IconButton(
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                  icon: const Icon(Icons.menu, color: AppColors.textPrimary),
-                  padding: const EdgeInsets.all(10),
-                ),
+            // Bouton Menu
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: IconButton(
+                onPressed: () => scaffoldKey.currentState?.openDrawer(),
+                icon: const Icon(Icons.menu, color: AppColors.textPrimary),
+                padding: const EdgeInsets.all(10),
               ),
             ),
             const SizedBox(width: 12),
+            
+            // Logo circulaire
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
-                ),
-                borderRadius: BorderRadius.circular(12),
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withOpacity(0.3),
@@ -351,13 +96,32 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.museum,
-                color: Colors.white,
-                size: 24,
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/logo.jpeg',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.museum,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
+            
             const SizedBox(width: 12),
+            
+            // Texte MCN
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,8 +143,12 @@ class HomePage extends StatelessWidget {
                 ],
               ),
             ),
+            
+            // Sélecteur de langue
             _buildLanguageSelector(oeuvreController),
             const SizedBox(width: 8),
+            
+            // Bouton QR Scanner
             _buildQRButton(),
           ],
         ),
@@ -440,98 +208,139 @@ class HomePage extends StatelessWidget {
     return SliverToBoxAdapter(
       child: Container(
         margin: const EdgeInsets.all(16),
-        height: 200,
+        height: 220,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
               AppColors.primary,
-              AppColors.primary.withOpacity(0.8),
+              AppColors.primary.withOpacity(0.85),
               AppColors.primaryLight,
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: AppColors.elevatedShadow,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.4),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Stack(
           children: [
+            // Cercles décoratifs
             Positioned(
-              right: -20,
-              top: -20,
+              right: -40,
+              top: -40,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.08),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -50,
+              bottom: -50,
               child: Container(
                 width: 150,
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withOpacity(0.08),
                 ),
               ),
             ),
-            Positioned(
-              left: -30,
-              bottom: -30,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
-            ),
+            
+            // Contenu
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Badge bienvenue
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Obx(() {
                       if (authController.isLoggedIn.value) {
                         final user = authController.currentUser.value;
-                        return Text(
-                          'Bienvenue ${user?.prenom ?? ''}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.waving_hand,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Bienvenue ${user?.prenom ?? ''}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         );
                       }
-                      return const Text(
-                        'Bienvenue',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      return const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.star_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Bienvenue',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       );
                     }),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  
+                  // Titre principal
                   const Text(
-                    'Découvrez\nL\'Art Africain',
+                    'Explorez l\'Héritage\nAfricain',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.w900,
-                      height: 1.2,
-                      letterSpacing: 0.5,
+                      height: 1.1,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  
+                  // Description
                   Text(
-                    'Explorez les trésors du Musée des Civilisations Noires',
+                    'Découvrez les trésors et l\'histoire des Civilisations Noires',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.95),
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      height: 1.4,
                     ),
                   ),
                 ],
@@ -543,68 +352,159 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildExpositionsSection(OeuvreController oeuvreController) {
+  Widget _buildVirtualTourButton() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Get.toNamed('/virtual-tour'),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withOpacity(0.15),
+                    AppColors.primary.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.view_in_ar,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Visite Virtuelle 360°',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Explorez le musée depuis chez vous',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary.withOpacity(0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchSection(OeuvreController oeuvreController) {
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
             child: Row(
               children: [
                 Container(
-                  width: 4,
-                  height: 24,
+                  width: 5,
+                  height: 28,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(2),
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryLight],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Expositions Actuelles',
+                  'Nos Œuvres',
                   style: Get.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
                   ),
                 ),
               ],
             ),
           ),
-          Container(
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
               onChanged: (value) => oeuvreController.searchOeuvres(value),
               decoration: InputDecoration(
-                hintText: 'Rechercher œuvres, artistes...',
+                hintText: 'Rechercher une œuvre...',
                 hintStyle: TextStyle(
-                  color: AppColors.textSecondary.withOpacity(0.6),
-                  fontSize: 14,
+                  color: AppColors.textSecondary.withOpacity(0.5),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
-                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 24),
                 suffixIcon: Obx(() => oeuvreController.searchQuery.value.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 20),
+                        icon: const Icon(Icons.clear, size: 22),
                         onPressed: () => oeuvreController.searchOeuvres(''),
                       )
                     : const SizedBox.shrink()),
                 filled: true,
                 fillColor: AppColors.surface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.divider),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.divider),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.divider.withOpacity(0.5)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: const BorderSide(color: AppColors.primary, width: 2),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
           ),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -613,11 +513,25 @@ class HomePage extends StatelessWidget {
   Widget _buildOeuvresGrid(OeuvreController oeuvreController, FavorisController favoriController) {
     return Obx(() {
       if (oeuvreController.isLoading.value && oeuvreController.filteredOeuvres.isEmpty) {
-        return const SliverFillRemaining(
+        return SliverFillRemaining(
           child: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation(AppColors.primary),
-              strokeWidth: 3,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 24),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Chargement...',
+                  style: Get.textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -630,27 +544,31 @@ class HomePage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.divider,
+                      width: 2,
+                    ),
                   ),
                   child: const Icon(
                     Icons.art_track,
-                    size: 60,
+                    size: 64,
                     color: AppColors.textTertiary,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 Text(
                   'Aucune œuvre trouvée',
                   style: Get.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tirez pour actualiser',
+                  'Tirez vers le bas pour actualiser',
                   style: Get.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -666,9 +584,9 @@ class HomePage extends StatelessWidget {
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.70,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            childAspectRatio: 0.68,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
           ),
           delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -682,120 +600,167 @@ class HomePage extends StatelessWidget {
     });
   }
 
-  // ✅ Modifié pour utiliser la langue sélectionnée
   Widget _buildOeuvreCard(dynamic oeuvre, FavorisController favoriController, OeuvreController oeuvreController) {
-    return GestureDetector(
-      onTap: () => Get.toNamed('/detail', arguments: oeuvre),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.cardShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Hero(
-                      tag: 'oeuvre-${oeuvre.id}',
-                      child: CachedNetworkImage(
-                        imageUrl: oeuvre.imageUrl ?? '',
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        placeholder: (context, url) => Container(
-                          color: AppColors.cardBackground,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(AppColors.primary),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => Get.toNamed('/detail', arguments: oeuvre),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                      child: Hero(
+                        tag: 'oeuvre-${oeuvre.id}',
+                        child: AnimatedScale(
+                          scale: 1.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: CachedNetworkImage(
+                            imageUrl: oeuvre.imageUrl ?? '',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            placeholder: (context, url) => Container(
+                              color: AppColors.cardBackground,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: AppColors.cardBackground,
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                size: 48,
+                                color: AppColors.textTertiary,
+                              ),
                             ),
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          color: AppColors.cardBackground,
-                          child: const Icon(Icons.image_not_supported, size: 40, color: AppColors.textTertiary),
-                        ),
                       ),
                     ),
-                  ),
-                  // ✅ Bouton favori visible seulement si connecté
-                  Obx(() {
-                    final authController = Get.find<AuthController>();
-                    if (!authController.isLoggedIn.value) {
-                      return const SizedBox.shrink();
-                    }
-                    
-                    final isFav = favoriController.isFavorite(oeuvre.id);
-                    return Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Obx(() {
+                      final isFav = favoriController.isFavorite(oeuvre.id);
+                      return GestureDetector(
                         onTap: () => favoriController.toggleFavorite(oeuvre.id),
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 6,
+                              ),
+                            ],
                           ),
                           child: Icon(
                             isFav ? Icons.favorite : Icons.favorite_border,
                             color: isFav ? Colors.red : Colors.white,
-                            size: 18,
+                            size: 22,
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
+                  ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ✅ Titre multilingue
-                  Obx(() {
-                    final titre = _getTitre(oeuvre, oeuvreController.selectedLangue.value);
-                    return Text(
-                      titre,
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      oeuvre.titre ?? 'Sans titre',
                       style: Get.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         height: 1.2,
+                        fontSize: 15,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                    );
-                  }),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.person, size: 12, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      Expanded(
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            oeuvre.artiste ?? 'Artiste inconnu',
+                            style: Get.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Obx(() {
+                      final description = oeuvre.getDescription(oeuvreController.selectedLangue.value);
+                      if (description.isEmpty) return const SizedBox.shrink();
+                      
+                      return Expanded(
                         child: Text(
-                          oeuvre.artiste ?? 'Artiste inconnu',
+                          description,
                           style: Get.textTheme.bodySmall?.copyWith(
                             color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 6,
+                            height: 1.4,
                           ),
-                          maxLines: 1,
+                          maxLines: 6,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      );
+                    }),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
